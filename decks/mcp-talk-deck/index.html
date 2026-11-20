@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Secure Your MCP Server with Auth0 · @focusotter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   THEME — BlockFrame (frontend-slides bold template)
+   Pastel-neon blocks, 4px black borders, hard offset shadows.
+   =========================================== */
+:root{
+  --black:#000;--white:#fff;--offwhite:#FFFDF5;
+  --pink:#FE90E8;--blue:#C0F7FE;--green:#99E885;--yellow:#F7CB46;--cream:#FFDC8B;
+  --b4:4px solid #000;--b3:3px solid #000;--sh8:8px 8px 0 #000;--sh4:4px 4px 0 #000;
+  --display:'Inter',sans-serif;--label:'Space Grotesk',sans-serif;--mono:'JetBrains Mono',monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --stage-bg:#1a1a1a;--slide-bg:#FFFDF5;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* === VIEWPORT BASE (frontend-slides viewport-base.css, full) === */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:var(--slide-bg,#fff)}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:block;visibility:hidden;opacity:0;pointer-events:none;background:var(--slide-bg,#fff)}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1}
+img,video,canvas,svg{max-width:100%;max-height:100%}
+.deck-controls{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:1000}
+@media print{html,body{width:1920px;height:auto;overflow:visible;background:#fff}.deck-viewport{position:static;overflow:visible;background:#fff}.deck-stage{position:static;width:auto;height:auto;transform:none!important;background:none}.slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:1920px;height:1080px;break-after:page;page-break-after:always}.slide:last-child{break-after:auto;page-break-after:auto}.deck-controls{display:none!important}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important}}
+
+/* === BASE TYPE & SURFACES === */
+.slide{font-family:var(--display);color:#000;padding:80px 96px}
+.g-off{background:var(--offwhite)}.g-blue{background:var(--blue)}.g-pink{background:var(--pink)}
+.g-green{background:var(--green)}.g-cream{background:var(--cream)}.g-yellow{background:var(--yellow)}.g-black{background:#000;color:#fff}
+.dots::after{content:"";position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(circle,rgba(0,0,0,.14) 1.4px,transparent 1.4px);background-size:28px 28px;z-index:0}
+.slide>*{position:relative;z-index:1}
+.pill{display:inline-block;border:var(--b3);box-shadow:var(--sh4);background:#fff;padding:10px 20px;font:600 24px/1 var(--label);letter-spacing:.08em;text-transform:uppercase}
+.pill.pink{background:var(--pink)}.pill.blue{background:var(--blue)}.pill.green{background:var(--green)}.pill.yellow{background:var(--yellow)}.pill.cream{background:var(--cream)}
+h1,h2,h3,.quote,.answer,.speaker b,.me b{font-feature-settings:"zero" 1}
+.nt{text-transform:none}
+h1,h2{font-weight:900;text-transform:uppercase;letter-spacing:-.03em;line-height:.95}
+h2{font-size:84px;margin-top:28px}
+.lead{font:500 34px/1.4 var(--display)}
+code,.mono{font-family:var(--mono)}
+.card{border:var(--b4);box-shadow:var(--sh8);background:#fff}
+.card-s{border:var(--b3);box-shadow:var(--sh4);background:#fff}
+.counter{position:absolute!important;left:96px;bottom:36px;border:var(--b3);background:#fff;box-shadow:var(--sh4);padding:8px 16px;font:700 20px/1 var(--label);letter-spacing:.1em;z-index:5}
+.brand{position:absolute!important;right:96px;bottom:42px;font:600 22px/1 var(--label);letter-spacing:.04em;z-index:5}
+.g-black .brand{color:#fff}
+.star{clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);background:#000;position:absolute!important}
+.star::before{content:"";position:absolute;inset:6px;clip-path:inherit;background:var(--c,var(--pink))}
+.deco{position:absolute!important;border:var(--b4)}
+
+/* === REVEAL ANIMATION === */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
+.slide.visible .reveal{opacity:1;transform:none}
+.slide.visible .reveal:nth-child(2){transition-delay:.08s}.slide.visible .reveal:nth-child(3){transition-delay:.16s}
+.slide.visible .reveal:nth-child(4){transition-delay:.24s}.slide.visible .reveal:nth-child(5){transition-delay:.32s}
+html.static .reveal{opacity:1!important;transform:none!important;transition:none!important}
+
+/* === 1. TITLE === */
+.s-title h1{font-size:132px;margin-top:56px;width:1120px}
+.s-title h1 em{font-style:normal;display:inline-block;background:var(--pink);border:var(--b4);box-shadow:var(--sh8);padding:6px 20px 0;margin:14px 0 10px -6px}
+.s-title .sub{margin-top:44px;width:1060px;font:600 40px/1.3 var(--display)}
+.s-title .meta{margin-top:40px;font:600 26px/1 var(--label);letter-spacing:.08em;text-transform:uppercase}
+.speaker{position:absolute!important;right:120px;top:150px;width:540px;background:var(--green);padding:26px;transform:rotate(2deg)}
+.speaker img{display:block;width:100%;border:var(--b4)}
+.speaker b{display:block;font:900 44px/1 var(--display);text-transform:uppercase;margin-top:22px;letter-spacing:-.02em}
+.speaker span{display:block;font:600 28px/1.3 var(--label);margin-top:10px}
+.speaker .handle{display:inline-block;margin-top:14px;background:#fff;border:var(--b3);padding:6px 12px;font:700 28px/1 var(--label)}
+
+/* === 2. HOOK === */
+.s-hook h2{font-size:96px;width:1500px}
+.qgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;margin-top:64px}
+.q{padding:36px 36px 40px;min-height:330px}
+.q .tag{display:inline-block;font:700 24px/1 var(--label);letter-spacing:.1em;border:var(--b3);padding:8px 14px;background:var(--yellow)}
+.q h3{font:900 54px/1 var(--display);text-transform:uppercase;letter-spacing:-.02em;margin-top:26px}
+.q p{font:500 30px/1.35 var(--display);margin-top:18px}
+.q:nth-child(1){rotate:-1.5deg}.q:nth-child(3){rotate:1.5deg}
+.answer{margin-top:56px;display:inline-block;background:#000;color:#fff;padding:20px 30px;font:800 40px/1.2 var(--display);box-shadow:8px 8px 0 var(--pink)}
+
+/* === 3. HOW IT WORKS === */
+.how{display:grid;grid-template-columns:760px 940px;gap:28px;margin-top:30px}
+.steps{list-style:none;display:flex;flex-direction:column;gap:26px;margin-top:20px}
+.steps li{display:grid;grid-template-columns:62px 1fr;gap:20px;align-items:start;font:500 29px/1.3 var(--display)}
+.steps li b{font-weight:800}
+.steps .n{width:62px;height:62px;border:var(--b3);background:var(--yellow);box-shadow:var(--sh4);display:grid;place-items:center;font:700 28px/1 var(--label)}
+.steps li:nth-child(2) .n{background:var(--pink)}.steps li:nth-child(3) .n{background:var(--blue)}.steps li:nth-child(4) .n{background:var(--green)}.steps li:nth-child(5) .n{background:var(--cream)}
+.shots{display:flex;flex-direction:column;gap:26px}
+.shot{border:var(--b4);box-shadow:var(--sh8);background:#1d1f2b;position:relative}
+.shot img{display:block;width:100%}
+.shot .cap{position:absolute;top:-22px;right:20px;border:var(--b3);background:var(--yellow);padding:6px 12px;font:700 20px/1 var(--label);letter-spacing:.08em;text-transform:uppercase}
+.shot.b .cap{background:var(--green)}
+
+/* === 4. REGISTRATION (DCR vs CIMD) === */
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:56px;margin-top:52px}
+.reg{padding:40px 44px;position:relative}
+.reg .badge{position:absolute;top:-26px;right:30px;border:var(--b3);box-shadow:var(--sh4);padding:8px 14px;font:700 22px/1 var(--label);letter-spacing:.06em;text-transform:uppercase;background:var(--green)}
+.reg h3{font:900 64px/1 var(--display);text-transform:uppercase;letter-spacing:-.02em}
+.reg .full{font:600 24px/1 var(--label);letter-spacing:.06em;text-transform:uppercase;margin-top:12px}
+.reg .meta-q{font:800 38px/1.2 var(--display);margin-top:30px}
+.reg ul{list-style:none;margin-top:24px;display:flex;flex-direction:column;gap:14px}
+.reg li{font:500 29px/1.35 var(--display);padding-left:40px;position:relative}
+.reg li::before{content:"";position:absolute;left:0;top:10px;width:20px;height:20px;border:var(--b3);background:var(--yellow)}
+.reg .idcard{margin-top:26px;border:var(--b3);background:var(--blue);padding:14px 18px;font:500 25px/1.3 var(--mono)}
+.reg.cimd{background:var(--white)}
+.reg.dcr{background:var(--offwhite)}
+
+/* === 5. CODE === */
+.codecard{margin-top:26px;padding:24px 40px;background:#fff}
+pre.code{font:500 28px/1.4 var(--mono);white-space:pre;color:#111}
+pre.code .ln{display:block;padding:0 12px;margin:0 -12px;transition:opacity .35s,background .35s}
+pre.code.focusing .ln{opacity:.2}
+pre.code.focusing .ln.on{opacity:1;background:var(--yellow)}
+pre.code.pending{opacity:0}
+html.static pre.code{opacity:1}
+.c-c{color:#6a6a6a;font-style:italic}.c-k{color:#9b1c8f;font-weight:700}.c-s{color:#0b6b2b}.c-f{color:#1f3fd1;font-weight:700}
+.stepnote{position:absolute!important;right:96px;top:96px;width:420px;padding:18px 22px;background:var(--cream);font:600 24px/1.3 var(--label)}
+
+/* === 6. DEMO === */
+.demo{display:grid;grid-template-columns:1fr 620px;gap:64px;margin-top:20px}
+.s-demo h2{font-size:74px;line-height:1}
+.s-demo h2 .ask{display:block;margin-top:16px;text-transform:none;letter-spacing:-.02em;font-weight:800;font-size:62px}
+.flow{list-style:none;margin-top:44px;display:flex;flex-direction:column;gap:20px}
+.flow li{background:#fff;border:var(--b3);box-shadow:var(--sh4);padding:18px 24px;font:500 30px/1.3 var(--display)}
+.flow li b{font-weight:800}
+.flow code{background:var(--blue);border:2px solid #000;padding:0 8px;font-size:26px}
+.phone{position:relative;align-self:start;margin-top:6px}
+.phone img{display:block;width:100%;border:var(--b4);box-shadow:var(--sh8);rotate:2deg}
+.sticker{position:absolute!important;left:-70px;bottom:40px;background:var(--yellow);border:var(--b4);box-shadow:var(--sh8);padding:16px 22px;font:800 30px/1.2 var(--display);transform:rotate(-4deg)}
+.sticker small{display:block;font:600 20px/1 var(--label);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+
+/* === 7. BOOTH QUESTION === */
+.s-booth .quote{margin-top:30px;font:900 56px/1.08 var(--display);text-transform:uppercase;letter-spacing:-.02em;width:1700px}
+.tokens{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:44px}
+.tok{padding:26px 32px 30px;background:#fff}
+.tok .t{font:700 22px/1 var(--label);letter-spacing:.08em;text-transform:uppercase;display:inline-block;border:var(--b3);padding:8px 12px;background:var(--blue)}
+.tok.obo .t{background:var(--green)}
+.tok pre{font:500 30px/1.5 var(--mono);margin-top:18px;white-space:pre}
+.tok .who{background:var(--yellow);font-weight:700}.tok .via{background:var(--blue);font-weight:700}.tok .act{background:var(--green);font-weight:700}
+.tok .note{color:#555;font-style:italic}
+.legend{margin-top:40px;display:flex;gap:22px;flex-wrap:wrap}
+.legend span{border:var(--b3);box-shadow:var(--sh4);padding:12px 18px;font:700 28px/1 var(--display);background:#fff}
+.legend span.y{background:var(--yellow)}.legend span.b{background:var(--blue)}.legend span.g{background:var(--green)}
+
+/* === 8. TIPS === */
+.tips{display:grid;grid-template-columns:1fr 860px;gap:56px;margin-top:36px}
+.check{list-style:none;display:flex;flex-direction:column;gap:17px}
+.check li{display:grid;grid-template-columns:52px 1fr;gap:18px;font:500 28px/1.3 var(--display)}
+.check li b{font-weight:800}
+.check li::before{content:"✓";width:52px;height:52px;border:var(--b3);box-shadow:var(--sh4);background:var(--green);display:grid;place-items:center;font:900 30px/1 var(--display)}
+.check code{background:var(--blue);border:2px solid #000;padding:0 6px;font-size:23px}
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
+.ba figure{position:relative}
+.ba img{display:block;width:100%;border:var(--b4);box-shadow:var(--sh8)}
+.ba figcaption{position:absolute;top:-20px;left:18px;border:var(--b3);box-shadow:var(--sh4);padding:8px 14px;font:700 22px/1 var(--label);letter-spacing:.08em;text-transform:uppercase;background:#fff}
+.ba figure:nth-child(2) figcaption{background:var(--green)}
+.ba figure:nth-child(1){rotate:-2deg}.ba figure:nth-child(2){rotate:2deg}
+.plan{margin-top:30px;display:inline-block;background:var(--cream);border:var(--b3);padding:10px 16px;font:600 22px/1.3 var(--label)}
+
+/* === 9. CLOSE / RESOURCES === */
+.close{display:grid;grid-template-columns:560px 1fr;gap:72px;height:100%}
+.me{border:4px solid #fff;box-shadow:12px 12px 0 var(--yellow);background:var(--pink);padding:24px;color:#000;align-self:start;margin-top:10px;rotate:-2deg}
+.me img{display:block;width:100%;border:var(--b4)}
+.me b{display:block;font:900 42px/1 var(--display);text-transform:uppercase;margin-top:20px;letter-spacing:-.02em}
+.me span{display:block;font:600 26px/1.3 var(--label);margin-top:8px}
+.me .handle{display:inline-block;margin-top:14px;background:#fff;border:var(--b3);padding:6px 12px;font:700 30px/1 var(--label)}
+.s-close h2{font-size:104px;color:#fff;margin-top:0}
+.s-close h2 em{font-style:normal;color:var(--yellow)}
+.res{margin-top:30px;background:#fff;color:#000;border:4px solid #fff;box-shadow:12px 12px 0 var(--yellow);padding:22px 32px}
+.res a{display:grid;grid-template-columns:330px 1fr;gap:20px;padding:13px 0;border-bottom:2px solid #000;color:#000;text-decoration:none;align-items:baseline}
+.res a:last-child{border-bottom:0}
+.res a b{font:800 28px/1.2 var(--display)}
+.res a span{font:500 22px/1.25 var(--mono);white-space:nowrap}
+.s-close .cta{margin-top:40px;font:700 30px/1.3 var(--label);color:#fff;letter-spacing:.02em}.s-close .cta b{color:var(--yellow)}
+
+/* === PRESENTER CHROME (outside stage) === */
+#notesPanel{position:fixed;left:0;right:0;bottom:0;max-height:30vh;overflow:auto;background:rgba(0,0,0,.88);color:#fff;font:16px/1.5 system-ui;padding:14px 22px;display:none;z-index:2000}
+#notesPanel.on{display:block}
+#progress{position:fixed;right:12px;top:10px;color:#888;font:12px var(--label);z-index:2000;display:none}
+body.show-progress #progress{display:block}
+aside.notes{display:none}
+html.static #progress{display:none}
+</style>
+</head>
+<body>
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+
+<!-- ============ 1. TITLE ============ -->
+<section class="slide s-title g-off dots active">
+  <span class="pill blue reveal">AGNTCon + MCPCon NA · Demo Theater</span>
+  <h1 class="reveal">Secure your <em>MCP server</em> with <span class="nt">Auth0</span></h1>
+  <p class="sub reveal">Trust, but verify: who called that tool — you, or your agent?</p>
+  <p class="meta reveal">Oct 22, 2026 · San Jose</p>
+  <div class="speaker card"><img src="assets/focus-headshot.jpg" alt="Michael Liendo"><b>Michael Liendo</b><span>Staff Developer Advocate, Auth0</span><span class="handle">@focusotter</span></div>
+  <div class="star" style="--c:var(--yellow);width:150px;height:150px;right:600px;top:96px"></div>
+  <div class="deco" style="width:120px;height:120px;background:var(--blue);right:110px;bottom:70px;transform:rotate(12deg)"></div>
+  <aside class="notes">Hi, I'm Michael — Focus Otter — Staff DA at Auth0. 10 minutes: 5 of slides, 5 of live demo. Goal: you leave knowing securing your own MCP server with Auth0 is a handful of settings and ~20 lines of code.</aside>
+</section>
+
+<!-- ============ 2. HOOK ============ -->
+<section class="slide s-hook g-blue">
+  <span class="pill yellow reveal">The problem</span>
+  <h2 class="reveal">Your MCP server is a public URL. Agents are knocking.</h2>
+  <div class="qgrid">
+    <div class="q card reveal"><span class="tag">WHO</span><h3>Which user?</h3><p>A real person signed in — not a shared API key.</p></div>
+    <div class="q card reveal" style="background:var(--offwhite)"><span class="tag" style="background:var(--pink)">VIA</span><h3>Which agent?</h3><p>Cursor, Claude, Grok Bot… the client acting for them.</p></div>
+    <div class="q card reveal"><span class="tag" style="background:var(--green)">WHAT</span><h3>Which tools?</h3><p>Only the scopes the user agreed to.</p></div>
+  </div>
+  <p class="answer reveal">OAuth already answers all three. Auth0 does the heavy lifting.</p>
+  <div class="star" style="--c:var(--pink);width:130px;height:130px;right:120px;top:70px"></div>
+  <aside class="notes">An MCP server is just an API with a very chatty audience. You need three answers: who's the user, which agent is acting, and what is it allowed to do. Good news: that's exactly what OAuth was built for — and the MCP spec uses it.</aside>
+</section>
+
+<!-- ============ 3. HOW IT WORKS ============ -->
+<section class="slide s-how g-off">
+  <span class="pill pink reveal">How it works</span>
+  <h2 class="reveal" style="font-size:72px;margin-top:20px">MCP server = OAuth resource server</h2>
+  <div class="how">
+    <ol class="steps">
+      <li class="reveal"><span class="n">1</span><span>Client calls <b>/mcp</b> with no token → <b>401</b> + <code>resource_metadata</code></span></li>
+      <li class="reveal"><span class="n">2</span><span>Server's <b>RFC 9728</b> metadata points at your <b>Auth0 tenant</b></span></li>
+      <li class="reveal"><span class="n">3</span><span>Client discovers Auth0 and <b>registers itself</b></span></li>
+      <li class="reveal"><span class="n">4</span><span>User <b>logs in + consents</b>; token <b>aud</b> = your MCP URL</span></li>
+      <li class="reveal"><span class="n">5</span><span>Server <b>validates the JWT</b> (JWKS, issuer, audience) and runs the tool</span></li>
+    </ol>
+    <div class="shots">
+      <div class="shot reveal"><span class="cap">Step 1 · live</span><img src="assets/curl-401-challenge.png" alt="curl -i shows HTTP 401 with WWW-Authenticate Bearer resource_metadata"></div>
+      <div class="shot b reveal"><span class="cap">Step 2 · live</span><img src="assets/protected-resource-metadata.png" alt="Protected resource metadata JSON"></div>
+    </div>
+  </div>
+  <aside class="notes">Five steps, and Auth0 + the client do most of it. Real output from our spike at focus-mcp-auth0.vercel.app: no token → 401 with a WWW-Authenticate header pointing at the protected resource metadata; that JSON lists the Auth0 tenant as authorization server. Cursor/Claude/Grok Bot take it from there.</aside>
+</section>
+
+<!-- ============ 4. CLIENT REGISTRATION ============ -->
+<section class="slide s-reg g-cream">
+  <span class="pill reveal">Step 3 · client registration</span>
+  <h2 class="reveal" style="font-size:76px">Two ways a client says hello</h2>
+  <div class="vs">
+    <div class="reg dcr card reveal"><span class="badge">GA</span>
+      <h3>DCR</h3><div class="full">Dynamic Client Registration</div>
+      <p class="meta-q">Every client signs up for its own account.</p>
+      <ul><li>Works with today's MCP clients out of the box</li><li>Each sign-up is a new app in your tenant — keep an eye on the count</li></ul>
+    </div>
+    <div class="reg cimd card reveal"><span class="badge" style="background:var(--pink)">Manual: GA · Dynamic: EA</span>
+      <h3>CIMD</h3><div class="full">Client ID Metadata Document</div>
+      <p class="meta-q">The client shows a public ID card at a URL.</p>
+      <ul><li>One client, one entry — no app sprawl</li><li>Real name + logo on the consent screen</li></ul>
+      <div class="idcard">client_id = https://client.example/oauth/client.json</div>
+    </div>
+  </div>
+  <p class="answer reveal" style="margin-top:60px;box-shadow:8px 8px 0 var(--blue)">Either way: the client finds you, registers, the user consents. No custom code.</p>
+  <div class="star" style="--c:var(--blue);width:120px;height:120px;right:110px;top:70px"></div>
+  <aside class="notes">DCR: every client signs up for its own account — GA, works everywhere. CIMD: the client ID is a URL to a public JSON "ID card" — manual registration is GA, dynamic CIMD is early access. Tip: prefer CIMD where you can — no app sprawl, and the consent screen shows the client's real name and logo.</aside>
+</section>
+
+<!-- ============ 5. CODE ============ -->
+<section class="slide s-code g-off">
+  <span class="pill green reveal">The code · Next.js</span>
+  <h2 class="reveal" style="font-size:72px;margin-top:22px">Four small pieces</h2>
+  <div class="codecard card">
+<pre class="code" data-steps="1-5;7-9;11-13;15-17"><span class="c-c">// 1. Tell clients where to log in (RFC 9728)</span>
+<span class="c-c">// app/.well-known/oauth-protected-resource/route.ts</span>
+<span class="c-k">export const</span> <span class="c-f">GET</span> = () =&gt; Response.<span class="c-f">json</span>({
+  resource: MCP_URL, authorization_servers: [AUTH0_ISSUER],
+});
+
+<span class="c-c">// 2. No token? Answer with just the challenge</span>
+<span class="c-k">const</span> <span class="c-f">challenge</span> = () =&gt; <span class="c-k">new</span> Response(<span class="c-k">null</span>, { status: 401, headers: {
+  <span class="c-s">"WWW-Authenticate"</span>: <span class="c-s">`Bearer resource_metadata="${PRM_URL}"`</span> } });
+
+<span class="c-c">// 3. Verify the JWT: signature (JWKS), issuer, audience</span>
+<span class="c-k">const</span> { payload } = <span class="c-k">await</span> <span class="c-f">jwtVerify</span>(token, JWKS, {
+  issuer: AUTH0_ISSUER, audience: MCP_URL });
+
+<span class="c-c">// 4. Gate each tool on its scope</span>
+<span class="c-k">if</span> (!authInfo?.scopes.<span class="c-f">includes</span>(<span class="c-s">"game:create"</span>))
+  <span class="c-k">return</span> <span class="c-f">deny</span>(<span class="c-s">"Ask for game:create"</span>);</pre>
+  </div>
+  <aside class="notes">Illustrative TypeScript (Next.js App Router + jose + MCP TS SDK authInfo). 1) metadata route. 2) the 401 challenge — that's all a missing token needs. 3) jwtVerify with the tenant JWKS, issuer, and audience = your MCP URL. 4) per-tool scopes like tool:whoami and game:create, granted via an RBAC role (we call ours "MCP Tool User"). Step through with → .</aside>
+</section>
+
+<!-- ============ 6. DEMO ============ -->
+<section class="slide s-demo g-green dots">
+  <span class="pill yellow reveal">Live demo</span>
+  <div class="demo">
+    <div>
+      <h2 class="reveal">Demo:<span class="ask">“I want to play a game of tag with my friends”</span></h2>
+      <ol class="flow">
+        <li class="reveal"><b>Connect</b> Grok Bot to the MCP server → Auth0 login + consent</li>
+        <li class="reveal">Agent calls <code>create_tag_game</code> — needs <code>game:create</code></li>
+        <li class="reveal">Back comes a <b>host link</b> with a <b>join QR code</b></li>
+        <li class="reveal">Host page: <b>“Created by &lt;user&gt; via &lt;client&gt;”</b></li>
+      </ol>
+    </div>
+    <div class="phone reveal"><img src="assets/grokbot-connect-card.png" alt="Grok Bot: Connect to focus-auth0-mcp">
+      <div class="sticker"><small>Straight from the token</small>sub + client_id</div></div>
+  </div>
+  <aside class="notes">DEMO (~5 min). Ask Grok Bot: "I want to play a game of tag with my friends." Show the connect card → Auth0 login/consent → create_tag_game → host link + QR → audience scans and joins. Point at "Created by … via …" on the host page — that's the setup for the next slide.</aside>
+</section>
+
+<!-- ============ 7. BOOTH QUESTION ============ -->
+<section class="slide s-booth g-pink">
+  <span class="pill reveal">The booth question</span>
+  <p class="quote reveal">“If I pass my token to my agent, how can I tell if the user did it — or the agent?”</p>
+  <div class="tokens">
+    <div class="tok card reveal"><span class="t">Token at your MCP server · whoami</span>
+<pre>{
+  <span class="who">"sub": "google-oauth2|…"</span>,  <span class="note">// user</span>
+  <span class="via">"client_id": "tpc_…"</span>,       <span class="note">// agent</span>
+  "aud": "https://focus-mcp-auth0
+          .vercel.app/mcp",
+  "scope": "tool:whoami"
+}</pre></div>
+    <div class="tok obo card reveal"><span class="t">After On-Behalf-Of exchange · RFC 8693</span>
+<pre>{
+  <span class="who">"sub": "google-oauth2|…"</span>,
+  "aud": "https://api.example.com",
+  "azp": "mcp_server_client",
+  <span class="act">"act": { "sub": "mcp_server_client",</span>
+  <span class="act">  "act": { "sub": "tpc_…" } }</span>
+}</pre></div>
+  </div>
+  <div class="legend reveal"><span class="y">sub = who</span><span class="b">client_id / azp = via what</span><span class="g">act = the whole chain</span><span>3rd-party APIs? Token Vault</span></div>
+  <aside class="notes">Answer: it's already in the token. sub = the user. client_id (azp in some token profiles) = the acting client — here tpc_…, a dynamically registered Cursor / Grok Bot client. aud = our MCP URL, scope = tool:whoami. When your MCP server calls a downstream API for the user, Auth0's On-Behalf-Of token exchange (RFC 8693) adds an act claim naming each actor, so the chain is explicit. For third-party APIs like GitHub or Google, Token Vault holds and refreshes those tokens.</aside>
+</section>
+
+<!-- ============ 8. TIPS ============ -->
+<section class="slide s-tips g-off">
+  <span class="pill green reveal">Getting started</span>
+  <h2 class="reveal" style="font-size:76px">Do this and it just works</h2>
+  <div class="tips">
+    <div>
+      <ul class="check">
+        <li class="reveal"><span>No token? Reply <b>401</b> + <code>resource_metadata</code>. That's it.</span></li>
+        <li class="reveal"><span>API identifier = your <b>production MCP URL</b></span></li>
+        <li class="reveal"><span>Promote login connections to <b>domain level</b> for third-party clients</span></li>
+        <li class="reveal"><span>Set a <b>default third-party client grant</b></span></li>
+        <li class="reveal"><span>Write scope descriptions <b>for humans</b> + turn on <code>use_scope_descriptions_for_consent</code></span></li>
+        <li class="reveal"><span>Prefer <b>CIMD</b> to skip client sprawl</span></li>
+      </ul>
+      <p class="plan reveal">Apps per tenant: Free 10 · self-service paid 100</p>
+    </div>
+    <div class="ba reveal">
+      <figure><figcaption>Before</figcaption><img src="assets/consent-auth0-raw-scope.png" alt="Consent screen showing raw scope 'Whoami: tool your whoami'"></figure>
+      <figure><figcaption>After</figcaption><img src="assets/consent-auth0-fixed.png" alt="Consent screen showing 'See who you're signed in as'"></figure>
+    </div>
+  </div>
+  <aside class="notes">Checklist from building the spike — each one is a single setting. Before/after: raw scope name on consent vs. a human description ("See who you're signed in as") once use_scope_descriptions_for_consent is on. Free plan allows 10 apps, self-service paid plans 100 — another reason CIMD is nice.</aside>
+</section>
+
+<!-- ============ 9. RESOURCES / CLOSE ============ -->
+<section class="slide s-close g-black">
+  <div class="close">
+    <div class="me reveal"><img src="assets/focus-headshot.jpg" alt="Michael Liendo"><b>Michael Liendo</b><span>Staff Developer Advocate, Auth0</span><span class="handle">@focusotter</span></div>
+    <div>
+      <h2 class="reveal">Thank you<em>!</em></h2>
+      <div class="res reveal">
+        <a href="https://auth0.com/ai/docs/mcp/intro/overview"><b>Auth for MCP</b><span>auth0.com/ai/docs/mcp/intro/overview</span></a>
+        <a href="https://auth0.com/ai/docs/mcp/get-started/authorization-for-your-mcp-server"><b>MCP server quickstart</b><span>auth0.com/ai/docs/mcp/get-started/…</span></a>
+        <a href="https://auth0.com/docs/get-started/applications/dynamic-client-registration"><b>DCR</b><span>auth0.com/docs/…/dynamic-client-registration</span></a>
+        <a href="https://auth0.com/docs/get-started/auth0-overview/create-applications/register-applications-with-cimd"><b>CIMD</b><span>auth0.com/docs/…/register-applications-with-cimd</span></a>
+        <a href="https://auth0.com/docs/secure/call-apis-on-users-behalf/on-behalf-of-token-exchange"><b>On-Behalf-Of</b><span>auth0.com/docs/…/on-behalf-of-token-exchange</span></a>
+        <a href="https://auth0.com/ai/docs/intro/token-vault"><b>Token Vault</b><span>auth0.com/ai/docs/intro/token-vault</span></a>
+        <a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization"><b>MCP auth spec</b><span>modelcontextprotocol.io/specification</span></a>
+        <a href="https://www.rfc-editor.org/rfc/rfc9728"><b>RFC 9728</b><span>rfc-editor.org/rfc/rfc9728</span></a>
+        <a href="https://focus-mcp-auth0.vercel.app/"><b>The spike</b><span>focus-mcp-auth0.vercel.app</span></a>
+      </div>
+      <p class="cta reveal">Questions? Find me at the booth · <b>@focusotter</b> on X &amp; GitHub</p>
+    </div>
+  </div>
+  <aside class="notes">Photo moment. Everything here is linked from the deployed deck. Come find me at the booth — @focusotter on X and GitHub.</aside>
+</section>
+
+</main>
+</div>
+<div id="notesPanel"></div><div id="progress"></div>
+
+<script>
+/* === SLIDE PRESENTATION CONTROLLER ===
+   Arrows / Space / PageUp/Down / wheel / swipe. URL hash #N (or #N.step) jumps.
+   N toggles speaker notes. E toggles inline editing. ?static = no animation/dimming (export). */
+if(location.search.includes('static'))document.documentElement.classList.add('static');
+class SlidePresentation{
+  constructor(){
+    this.static=location.search.includes('static');
+    this.slides=[...document.querySelectorAll('.slide')];
+    this.stage=document.getElementById('deckStage');
+    this.notes=document.getElementById('notesPanel');
+    this.prog=document.getElementById('progress');
+    /* Chrome: counter pill + handle on content slides */
+    this.slides.forEach((s,i)=>{
+      if(i===0||i===this.slides.length-1)return;
+      const c=document.createElement('div');c.className='counter';c.textContent=String(i+1).padStart(2,'0')+' / '+String(this.slides.length).padStart(2,'0');s.appendChild(c);
+      const b=document.createElement('div');b.className='brand';b.textContent='@focusotter · Auth0';s.appendChild(b);
+    });
+    this.setupCode();this.scale();addEventListener('resize',()=>this.scale());this.bind();this.fromHash();
+    addEventListener('hashchange',()=>{if(location.hash!==this.lastHash)this.fromHash();});
+  }
+  /* === CODE STEP-THROUGH: <pre class="code" data-steps="1-5;7-9"> → reveal, then focus each group, dimming the rest === */
+  setupCode(){
+    const parse=g=>{const set=new Set();g.split(',').forEach(r=>{const [x,y]=r.split('-').map(Number);for(let k=x;k<=(y||x);k++)set.add(k);});return set;};
+    this.slides.forEach(s=>{s._seq=[];
+      s.querySelectorAll('pre.code').forEach(pre=>{
+        pre.innerHTML=pre.innerHTML.split('\n').map(l=>'<span class="ln">'+(l||'\u200b')+'</span>').join('');
+        pre._lines=[...pre.querySelectorAll('.ln')];
+        (pre.dataset.steps||'').split(';').filter(Boolean).forEach(g=>s._seq.push({pre,lines:parse(g)}));
+      });});
+  }
+  applySteps(s,step){
+    s.querySelectorAll('pre.code').forEach(pre=>{
+      let focus=null; if(!this.static&&step>0)focus=s._seq[step-1].lines;
+      pre.classList.toggle('focusing',!!focus);
+      pre._lines.forEach((ln,k)=>ln.classList.toggle('on',!!focus&&focus.has(k+1)));
+    });
+  }
+  fromHash(){const m=location.hash.match(/^#(\d+)(?:\.(\d+))?/);this.show(m?m[1]-1:0,m&&m[2]?+m[2]:0);}
+  scale(){const f=Math.min(innerWidth/1920,innerHeight/1080);this.stage.style.transform=`translate(${(innerWidth-1920*f)/2}px,${(innerHeight-1080*f)/2}px) scale(${f})`;}
+  show(i,step=0){
+    this.cur=Math.max(0,Math.min(i,this.slides.length-1));const s=this.slides[this.cur];
+    this.step=Math.max(0,Math.min(step,s._seq.length));
+    this.slides.forEach((x,j)=>{x.classList.toggle('active',j===this.cur);x.classList.toggle('visible',j===this.cur);});
+    this.applySteps(s,this.step);
+    const n=s.querySelector('aside.notes');this.notes.textContent=n?n.textContent:'';
+    this.prog.textContent=(this.cur+1)+'/'+this.slides.length+(s._seq.length?' · step '+this.step+'/'+s._seq.length:'');
+    this.lastHash='#'+(this.cur+1)+(this.step?'.'+this.step:'');
+    history.replaceState(null,'',location.pathname+location.search+this.lastHash);
+  }
+  next(){const s=this.slides[this.cur];if(!this.static&&this.step<s._seq.length)this.show(this.cur,this.step+1);else if(this.cur<this.slides.length-1)this.show(this.cur+1,0);}
+  prev(){if(!this.static&&this.step>0)this.show(this.cur,this.step-1);else if(this.cur>0){const p=this.slides[this.cur-1];this.show(this.cur-1,this.static?0:p._seq.length);}}
+  bind(){
+    document.addEventListener('keydown',e=>{
+      if(e.target.isContentEditable)return;
+      if(['ArrowRight','ArrowDown',' ','PageDown','Enter'].includes(e.key)){e.preventDefault();this.next();}
+      else if(['ArrowLeft','ArrowUp','PageUp','Backspace'].includes(e.key)){e.preventDefault();this.prev();}
+      else if(e.key==='Home')this.show(0);else if(e.key==='End')this.show(this.slides.length-1);
+      else if(e.key==='n'||e.key==='N'){this.notes.classList.toggle('on');document.body.classList.toggle('show-progress');}
+      else if(e.key==='e'||e.key==='E'){const on=!document.body.classList.toggle('editing')?false:true;
+        document.querySelectorAll('.slide h1,.slide h2,.slide p,.slide li,.slide b,.slide span').forEach(el=>el.contentEditable=on);}
+    });
+    let t=0;addEventListener('wheel',e=>{const now=Date.now();if(now-t<600)return;t=now;e.deltaY>0?this.next():this.prev();},{passive:true});
+    let x0=null;addEventListener('touchstart',e=>x0=e.touches[0].clientX,{passive:true});
+    addEventListener('touchend',e=>{if(x0===null)return;const dx=e.changedTouches[0].clientX-x0;if(Math.abs(dx)>50)(dx<0?this.next():this.prev());x0=null;});
+  }
+}
+const deck=new SlidePresentation();
+</script>
+</body>
+</html>
